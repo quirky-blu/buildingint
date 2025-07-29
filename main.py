@@ -8,7 +8,7 @@ from io import BytesIO
 
 import json
 try:
-    learn = load_learner("app/floor_detector2.pkl")
+    learn = load_learner("floor_detector2.pkl")
     print("FastAI model loaded successfully.")
 except Exception as e:
     print(f"Error loading FastAI model: {e}")
