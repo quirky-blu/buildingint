@@ -7,12 +7,7 @@ from fastapi import FastAPI, Query, HTTPException, File, UploadFile
 from io import BytesIO
 
 import json
-try:
-    learn = load_learner("floor_detector2.pkl")
-    print("FastAI model loaded successfully.")
-except Exception as e:
-    print(f"Error loading FastAI model: {e}")
-    learn = None
+
 app = FastAPI()
 
 # Enable CORS
@@ -33,6 +28,9 @@ for file in geojson_files:
 
 @app.post("/predict/")
 async def predict(file: UploadFile = File(...)):
+    global learn
+    if learn is None:
+        learn = load_learner("floor_detector2.pkl") 
     if learn is None:
         raise HTTPException(status_code=500, detail="Model not loaded")
 

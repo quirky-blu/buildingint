@@ -1,0 +1,6 @@
+tmp
+bld
+.env
+ignore
+tmp
+__pycache__/
