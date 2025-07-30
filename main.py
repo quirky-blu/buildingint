@@ -10,7 +10,11 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5500", "http://localhost:5500"],
+    allow_origins=[
+        "http://127.0.0.1:5500",                  # local dev
+        "http://localhost:5500",                  # local dev alternate
+        "https://nirmaan-vigil-ai.vercel.app"     # Vercel frontend
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
