@@ -23,8 +23,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-with open("boxes_updated.geojson") as f:
-    full_geojson = json.load(f)
+geojson_files = ["boxes_part1.geojson", "boxes_part2.geojson"]
+all_features = []
+
+for file in geojson_files:
+    with open(file, "r") as f:
+        data = json.load(f)
+        all_features.extend(data["features"])
 
 @app.post("/predict/")
 async def predict(file: UploadFile = File(...)):
@@ -40,9 +45,14 @@ async def predict(file: UploadFile = File(...)):
         "probabilities": [float(p) for p in probs]
     }
 @app.get("/geojson")
-def get_geojson(north: float, south: float, east: float, west: float):
-    features = []
-    for feature in full_geojson["features"]:
+def get_geojson(
+    north: float = Query(...),
+    south: float = Query(...),
+    east: float = Query(...),
+    west: float = Query(...)
+):
+    filtered = []
+    for feature in all_features:
         try:
             coords = feature["geometry"]["coordinates"][0]
             lngs = [c[0] for c in coords]
@@ -51,8 +61,11 @@ def get_geojson(north: float, south: float, east: float, west: float):
                 min(lats) <= north and max(lats) >= south and
                 min(lngs) <= east and max(lngs) >= west
             ):
-                features.append(feature)
-        except:
+                filtered.append(feature)
+        except Exception:
             continue
-    return JSONResponse({"type": "FeatureCollection", "features": features})
-    
+
+    return JSONResponse({
+        "type": "FeatureCollection",
+        "features": filtered
+    })
