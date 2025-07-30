@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Satellite Encroachment Map</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+    .popup-buttons button {
+      margin-top: 5px;
+      display: block;
+      width: 100%;
+      padding: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+  const map = L.map('map').setView([22.7196, 75.8577], 15);
+
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '&copy; Esri — Source: Esri, Maxar',
+    maxZoom: 20
+  }).addTo(map);
+
+  let geoJsonLayer = null;
+  let selectedLayer = null;
+
+  function loadBoxes() {
+    const bounds = map.getBounds();
+    const url = `http://localhost:8000/geojson?north=${bounds.getNorth()}&south=${bounds.getSouth()}&east=${bounds.getEast()}&west=${bounds.getWest()}`;
+
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        if (geoJsonLayer) map.removeLayer(geoJsonLayer);
+
+        geoJsonLayer = L.geoJSON(data, {
+          style: feature => ({
+            color: feature.properties.color || 'red',
+            fillColor: feature.properties.color || 'red',
+            weight: 2,
+            fillOpacity: 0.4
+          }),
+          onEachFeature: (feature, layer) => {
+  const p = feature.properties;
+
+  const popupDiv = document.createElement('div');
+  popupDiv.innerHTML = `
+    <b>Area:</b> ${p.area_in_meters ?? '-'} m²<br>
+    <b>Status:</b> ${p.status ?? '-'}<br>
+    <b>UID:</b> ${p.UID ?? '-'}<br>
+    <b>Lat:</b> ${p.latitude ?? '-'}<br>
+    <b>Lng:</b> ${p.longitude ?? '-'}<br><br>
+    <div class="popup-buttons">
+      <button data-color="red">Encroachment Detected</button>
+      <button data-color="yellow">Add to Investigation List</button>
+      <button data-color="green">Remove from Encroachment List</button>
+    </div>
+  `;
+
+  // bind popup with this div
+  layer.bindPopup(popupDiv);
+
+  // Add event listener after popup opens
+  layer.on('popupopen', () => {
+    const buttons = popupDiv.querySelectorAll('button');
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const color = btn.dataset.color;
+        layer.setStyle({ fillColor: color, color: color });
+        layer.feature.properties.color = color;
+      });
+    });
+  });
+}
+        }).addTo(map);
+      })
+      .catch(err => {
+        console.error('Error fetching polygons:', err);
+      });
+  }
+
+  function setColor(layerId, color) {
+    const layer = geoJsonLayer.getLayer(layerId);
+    if (layer) {
+      layer.setStyle({ fillColor: color, color: color });
+      layer.feature.properties.color = color;  // update internal color reference
+    }
+  }
+
+  map.on('moveend zoomend', loadBoxes);
+  map.whenReady(loadBoxes);
+</script>
+
+</body>
+</html>
